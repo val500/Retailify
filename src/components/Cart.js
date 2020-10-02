@@ -1,4 +1,4 @@
-import React, { Fragment } from "react";
+import React from "react";
 import withContext from "../withContext";
 import CartItem from "./CartItem";
 
@@ -6,7 +6,7 @@ const Cart = props => {
   const { cart } = props.context;
   const cartKeys = Object.keys(cart || {});
   return (
-    <Fragment>
+    <>
       <div className="hero is-primary">
         <div className="hero-body container">
           <h4 className="title">My Cart</h4>
@@ -48,7 +48,7 @@ const Cart = props => {
           </div>
         )}
       </div>
-    </Fragment>
+    </>
   );
 };
 

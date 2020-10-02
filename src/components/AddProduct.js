@@ -1,6 +1,7 @@
-import React, { Component, Fragment } from "react";
+import React, { Component } from "react";
 import withContext from "../withContext";
 import { Redirect } from "react-router-dom";
+import axios from 'axios';
 
 const initState = {
   name: "",
@@ -16,9 +17,17 @@ class AddProduct extends Component {
     this.state = initState;
   }
 
-  save = e => {
+  save = async (e) => {
     e.preventDefault();
     const { name, price, stock, shortDesc, description } = this.state;
+    const id = Math.random().toString(36).substring(2) + Date.now().toString(36);
+
+    await axios.post(
+      'http://localhost:3001/products',
+      { id, name, price, stock, shortDesc, description },
+      { 'headers': { 'Content-Type': 'application/json; charset=utf-8' } }
+    )
+
     if (name && price) {
       this.props.context.addProduct(
         {
@@ -30,24 +39,30 @@ class AddProduct extends Component {
         },
         () => this.setState(initState)
       );
+      this.setState(
+        { flash: { status: 'is-success', msg: 'Product created successfully' }}
+      );
+
     } else {
-      this.setState({ error: "Please Enter name and price" });
+      this.setState(
+        { flash: { status: 'is-danger', msg: 'Please enter name and price' }}
+      );
     }
   };
 
-  handleChange = e =>
-    this.setState({ [e.target.name]: e.target.value, error: "" });
+  handleChange = e => this.setState({ [e.target.name]: e.target.value, error: "" });
 
   render() {
     const { name, price, stock, shortDesc, description } = this.state;
     const { user } = this.props.context;
+
     return !(user && user.accessLevel < 1) ? (
       <Redirect to="/" />
     ) : (
-      <Fragment>
+      <>
         <div className="hero is-primary ">
           <div className="hero-body container">
-            <h4 className="title">Login</h4>
+            <h4 className="title">Add Product</h4>
           </div>
         </div>
         <br />
@@ -109,8 +124,10 @@ class AddProduct extends Component {
                   onChange={this.handleChange}
                 />
               </div>
-              {this.state.error && (
-                <div className="error">{this.state.error}</div>
+              {this.state.flash && (
+                <div className={`notification ${this.state.flash.status}`}>
+                  {this.state.flash.msg}
+                </div>
               )}
               <div className="field is-clearfix">
                 <button
@@ -124,7 +141,7 @@ class AddProduct extends Component {
             </div>
           </div>
         </form>
-      </Fragment>
+      </>
     );
   }
 }

@@ -1,6 +1,6 @@
-import React, { Component, Fragment } from "react";
-import withContext from "../withContext";
+import React, { Component } from "react";
 import { Redirect } from "react-router-dom";
+import withContext from "../withContext";
 
 class Login extends Component {
   constructor(props) {
@@ -10,23 +10,25 @@ class Login extends Component {
       password: ""
     };
   }
-  handleChange = e =>
-    this.setState({ [e.target.name]: e.target.value, error: "" });
+
+  handleChange = e => this.setState({ [e.target.name]: e.target.value, error: "" });
 
   login = () => {
     const { username, password } = this.state;
     if (!username || !password) {
       return this.setState({ error: "Fill all fields!" });
     }
-    let loggedIn = this.props.context.login(username, password);
-    if (!loggedIn) {
-      this.setState({ error: "Invalid Credentails" });
-    }
+    this.props.context.login(username, password)
+      .then((loggedIn) => {
+        if (!loggedIn) {
+          this.setState({ error: "Invalid Credentails" });
+        }
+      })
   };
 
   render() {
     return !this.props.context.user ? (
-      <Fragment>
+      <>
         <div className="hero is-primary ">
           <div className="hero-body container">
             <h4 className="title">Login</h4>
@@ -37,10 +39,10 @@ class Login extends Component {
         <div className="columns is-mobile is-centered">
           <div className="column is-one-third">
             <div className="field">
-              <label className="label">User Name: </label>
+              <label className="label">Email: </label>
               <input
                 className="input"
-                type="text"
+                type="email"
                 name="username"
                 onChange={this.handleChange}
               />
@@ -67,11 +69,10 @@ class Login extends Component {
             </div>
           </div>
         </div>
-      </Fragment>
+      </>
     ) : (
       <Redirect to="/products" />
     );
   }
 }
-
 export default withContext(Login);

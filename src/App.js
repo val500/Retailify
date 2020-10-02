@@ -1,10 +1,13 @@
 import React, { Component } from "react";
 import { Switch, Route, Link, BrowserRouter as Router } from "react-router-dom";
-import Login from "./components/Login";
-import ProductList from "./components/ProductList";
-import AddProduct from "./components/AddProduct";
-import Cart from "./components/Cart";
-import data from "./Data";
+import axios from 'axios';
+import jwt_decode from 'jwt-decode';
+
+import AddProduct from './components/AddProduct';
+import Cart from './components/Cart';
+import Login from './components/Login';
+import ProductList from './components/ProductList';
+
 import Context from "./Context";
 
 export default class App extends Component {
@@ -15,18 +18,44 @@ export default class App extends Component {
       cart: {},
       products: []
     };
-
     this.routerRef = React.createRef();
   }
-  login = (usn, pwd) => {
-    let user = data.users.find(u => u.username === usn && u.password === pwd);
-    if (user) {
+
+  async componentDidMount() {
+    let user = localStorage.getItem("user");
+    let cart = localStorage.getItem("cart");
+
+    const products = await axios.get('http://localhost:3001/products');
+    user = user ? JSON.parse(user) : null;
+    cart = cart? JSON.parse(cart) : {};
+
+    this.setState({ user,  products: products.data, cart });
+  }
+
+  login = async (email, password) => {
+    const res = await axios.post(
+      'http://localhost:3001/login',
+      { email, password },
+      { 'headers': { 'Content-Type': 'application/json; charset=utf-8' } }
+    ).catch((res) => {
+      return { status: 401, message: 'Unauthorized' }
+    })
+
+    if(res.status === 200) {
+      const { email } = jwt_decode(res.data.accessToken)
+      const user = {
+        email,
+        token: res.data.accessToken,
+        accessLevel: email === 'admin@example.com' ? 0 : 1
+      }
+
       this.setState({ user });
       localStorage.setItem("user", JSON.stringify(user));
       return true;
+    } else {
+      return false;
     }
-    return false;
-  };
+  }
 
   logout = e => {
     e.preventDefault();
@@ -37,7 +66,6 @@ export default class App extends Component {
   addProduct = (product, callback) => {
     let products = this.state.products.slice();
     products.push(product);
-    localStorage.setItem("products", JSON.stringify(products));
     this.setState({ products }, () => callback && callback());
   };
 
@@ -55,22 +83,6 @@ export default class App extends Component {
     this.setState({ cart });
   };
 
-  checkout = () => {
-    if (!this.state.user) {
-      this.routerRef.current.history.push("/login");
-      return;
-    }
-    const cart = this.state.cart;
-    const products = this.state.products.map(p => {
-      if (cart[p.name]) {
-        p.stock = p.stock - cart[p.name].amount;
-      }
-      return p;
-    });
-    this.setState({ products });
-    this.clearCart();
-  };
-
   removeFromCart = cartItemId => {
     let cart = this.state.cart;
     delete cart[cartItemId];
@@ -80,19 +92,34 @@ export default class App extends Component {
 
   clearCart = () => {
     let cart = {};
-    localStorage.setItem("cart", JSON.stringify(cart));
+    localStorage.removeItem("cart");
     this.setState({ cart });
   };
 
-  componentDidMount() {
-    let products = localStorage.getItem("products");
-    let cart = localStorage.getItem("cart");
-    let user = localStorage.getItem("user");
-    products = products ? JSON.parse(products) : data.initProducts;
-    cart = cart ? JSON.parse(cart) : {};
-    user = user ? JSON.parse(user) : null;
-    this.setState({ products, user, cart });
-  }
+  checkout = () => {
+    if (!this.state.user) {
+      this.routerRef.current.history.push("/login");
+      return;
+    }
+
+    const cart = this.state.cart;
+
+    const products = this.state.products.map(p => {
+      if (cart[p.name]) {
+        p.stock = p.stock - cart[p.name].amount;
+
+        axios.put(
+          `http://localhost:3001/products/${p.id}`,
+          { ...p },
+          { 'headers': { 'Content-Type': 'application/json; charset=utf-8' } }
+        )
+      }
+      return p;
+    });
+
+    this.setState({ products });
+    this.clearCart();
+  };
 
   render() {
     return (
@@ -108,37 +135,33 @@ export default class App extends Component {
         }}
       >
         <Router ref={this.routerRef}>
-          <div className="App">
-            <nav
-              className="navbar container"
-              role="navigation"
-              aria-label="main navigation"
-            >
-              <div className="navbar-brand">
-                <b className="navbar-item is-size-4 ">E-Commerce</b>
-
-                <a
-                  href="/"
-                  role="button"
-                  className="navbar-burger burger"
-                  aria-label="menu"
-                  aria-expanded="false"
-                  data-target="navbarBasicExample"
-                  onClick={e => {
-                    e.preventDefault();
-                    this.setState({ showMenu: !this.state.showMenu });
-                  }}
-                >
-                  <span aria-hidden="true"></span>
-                  <span aria-hidden="true"></span>
-                  <span aria-hidden="true"></span>
-                </a>
-              </div>
-              <div
-                className={`navbar-menu ${
-                  this.state.showMenu ? "is-active" : ""
-                }`}
+        <div className="App">
+          <nav
+            className="navbar container"
+            role="navigation"
+            aria-label="main navigation"
+          >
+            <div className="navbar-brand">
+              <b className="navbar-item is-size-4 ">ecommerce</b>
+              <label
+                role="button"
+                class="navbar-burger burger"
+                aria-label="menu"
+                aria-expanded="false"
+                data-target="navbarBasicExample"
+                onClick={e => {
+                  e.preventDefault();
+                  this.setState({ showMenu: !this.state.showMenu });
+                }}
               >
+                <span aria-hidden="true"></span>
+                <span aria-hidden="true"></span>
+                <span aria-hidden="true"></span>
+              </label>
+            </div>
+              <div className={`navbar-menu ${
+                  this.state.showMenu ? "is-active" : ""
+                }`}>
                 <Link to="/products" className="navbar-item">
                   Products
                 </Link>
@@ -153,7 +176,7 @@ export default class App extends Component {
                     className="tag is-primary"
                     style={{ marginLeft: "5px" }}
                   >
-                    {Object.keys(this.state.cart).length}
+                    { Object.keys(this.state.cart).length }
                   </span>
                 </Link>
                 {!this.state.user ? (
@@ -161,13 +184,12 @@ export default class App extends Component {
                     Login
                   </Link>
                 ) : (
-                  <a href="/" className="navbar-item" onClick={this.logout}>
+                  <Link to="/" onClick={this.logout} className="navbar-item">
                     Logout
-                  </a>
+                  </Link>
                 )}
               </div>
             </nav>
-
             <Switch>
               <Route exact path="/" component={ProductList} />
               <Route exact path="/login" component={Login} />

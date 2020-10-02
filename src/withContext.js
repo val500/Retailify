@@ -9,7 +9,7 @@ const withContext = WrappedComponent => {
       </Context.Consumer>
     );
   };
-  WithHOC.WrappedComponent = WrappedComponent;
+
   return WithHOC;
 };
 
