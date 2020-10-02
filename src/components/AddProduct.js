@@ -25,7 +25,6 @@ class AddProduct extends Component {
     await axios.post(
       'http://localhost:3001/products',
       { id, name, price, stock, shortDesc, description },
-      { 'headers': { 'Content-Type': 'application/json; charset=utf-8' } }
     )
 
     if (name && price) {

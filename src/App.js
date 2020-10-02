@@ -36,7 +36,6 @@ export default class App extends Component {
     const res = await axios.post(
       'http://localhost:3001/login',
       { email, password },
-      { 'headers': { 'Content-Type': 'application/json; charset=utf-8' } }
     ).catch((res) => {
       return { status: 401, message: 'Unauthorized' }
     })
@@ -111,7 +110,6 @@ export default class App extends Component {
         axios.put(
           `http://localhost:3001/products/${p.id}`,
           { ...p },
-          { 'headers': { 'Content-Type': 'application/json; charset=utf-8' } }
         )
       }
       return p;
